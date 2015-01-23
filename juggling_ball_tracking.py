@@ -6,17 +6,18 @@ new = 0
 track = []
 radius = 18
 thickness = 5
-cap = cv2.VideoCapture('/home/sm/Desktop/VIRB0012.MP4')
-for i in range(930): ret, img = cap.read()
+cap = cv2.VideoCapture(0) # integrated wbcam
+# cap = cv2.VideoCapture('/home/sm/Desktop/VIRB0012.MP4')
+# for i in range(930): ret, img = cap.read()
 while True:
     ret, img = cap.read()
-    img = img[0:480, 100:700]
+    # img = img[0:480, 100:700]
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     ret, thresh = cv2.threshold(gray, 233, 255, 0)
-    contours, h, g = cv2.findContours(thresh, cv2.RETR_TREE,
+    contours, h = cv2.findContours(thresh, cv2.RETR_TREE,
                                       cv2.CHAIN_APPROX_SIMPLE)
     locations = []
-    for i in h:
+    for i in contours:
         area = cv2.contourArea(i)
         if area > 300:
             location = cv2.minEnclosingCircle(i)
@@ -41,14 +42,14 @@ while True:
     else:
         new_track = []
         for i in locations:
-        x,y = i[0], i[1]
-        distance = []
-        for c in track:
-            x1, y1 = c[1][0], c[1][1]
-            distance.append(math.sqrt((x-x1)**2+(y-y1)**2))
-        index = distance.index(min(distance))
-        new_track.append((track[index][0], (x,y)))
-    track = new_track                
+            x,y = i[0], i[1]
+            distance = []
+            for c in track:
+                x1, y1 = c[1][0], c[1][1]
+                distance.append(math.sqrt((x-x1)**2+(y-y1)**2))
+            index = distance.index(min(distance))
+            new_track.append((track[index][0], (x,y)))
+        track = new_track                
 
     for i in track:
         center = int(i[1][0]),int(i[1][1])
