@@ -3,8 +3,6 @@ import numpy as np
 import cv2
 import math
 
-
-
 class JugglingBallTracker(object):
     WHITE = (255,0,0)
     colors = [(255,0,0), (125,125,125), (0,255,0), (0,0,255), (125,125,0)]
@@ -32,6 +30,7 @@ class JugglingBallTracker(object):
     
     def read_frame(self):
         ret, self.current_frame = self.video_source.read()
+        self.current_frame = self.current_frame[:, ::-1]
         if not ret:
             sys.exit("can't read frame")
         self.original_capture = self.current_frame
@@ -55,13 +54,13 @@ class JugglingBallTracker(object):
         contours, hierarchy = cv2.findContours(self.current_frame, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         return contours
     
-    def locate_balls(self, minimum_area=300):
+    def locate_balls(self, minimum_area=300, maximum_area=3000):
         contours = self.find_contours()
         locations = []
         for contour in contours:
             # Check if it is a juggling ball - this is gonna need improvement
             area = cv2.contourArea(contour)
-            if area > minimum_area:
+            if minimum_area < area < maximum_area:
                 locations.append((contour, cv2.minEnclosingCircle(contour)))
         
         return locations
@@ -74,6 +73,22 @@ class JugglingBallTracker(object):
         balls = map(lambda x: x[1], balls)
         for center, radius in balls:
             cv2.circle(self.current_frame, (int(center[0]), int(center[1])), int(radius), color=self.colors[1], thickness=3)
+    
+    def annotate_balls(self, balls):
+        for contour, ball in balls: 
+            area = cv2.contourArea(contour)
+            center = ball[0]
+            text = "%s" % area
+            position = (int(center[0]), int(center[1]))
+            self.show_text(text, position)
+    
+    def show_text(self, text, position):
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        fontSize = 1
+        color = (255,255,255)
+        fontLineThickness = 2
+        lineType = cv2.CV_AA
+        cv2.putText(self.current_frame, text, position, font, fontSize, color, fontLineThickness, lineType)
         
 
 """
@@ -86,17 +101,22 @@ class JugglingBallTracker(object):
     * If a new ball is found he gets a new color
 """
         
+threshold = 133
 tracker = JugglingBallTracker()
 # for i in range(930): tracker.read_frame()
 while True:
     tracker.read_frame()
     # tracker.crop_frame(0:480, 100:700)
     tracker.to_grey_scale()
-    tracker.apply_threshold(150)
-    balls = tracker.locate_balls(minimum_area=600)
+    tracker.apply_threshold(threshold)
+    threshold %= 255
+    threshold += 1
+    balls = tracker.locate_balls(minimum_area=75, maximum_area=4000)
     tracker.highlight_contours(balls)
     tracker.highlight_balls(balls)
+    tracker.annotate_balls(balls)
     
+    tracker.show_text("threshold %s" % threshold, (15, len(tracker.current_frame) - 20))
     
 #     if len(locations) < len(track):
 #         print 'problem'
