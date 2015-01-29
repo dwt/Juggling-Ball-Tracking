@@ -79,14 +79,14 @@ class JugglingBallTracker(object):
             area = cv2.contourArea(contour)
             center = ball[0]
             text = "%s" % area
-            position = (int(center[0]), int(center[1]))
+            position = (int(center[0]), int(center[1]) + int(ball[1]))
             self.show_text(text, position)
     
     def show_text(self, text, position):
         font = cv2.FONT_HERSHEY_SIMPLEX
-        fontSize = 1
+        fontSize = .5
         color = (255,255,255)
-        fontLineThickness = 2
+        fontLineThickness = 1
         lineType = cv2.CV_AA
         cv2.putText(self.current_frame, text, position, font, fontSize, color, fontLineThickness, lineType)
         
@@ -99,9 +99,27 @@ class JugglingBallTracker(object):
 * I would like to track balls probabilistic
     * If a ball isn't found for a number of frames, it is discarded
     * If a new ball is found he gets a new color
+
+# Algorithmic ideas
+
+* filter detected balls by history.
+    * If position is identical with old position, consider keepin it
+    * If position change is insufficient, for some time, remove point
+    * If position change is consistent with first or second aproximation of an existing ball, keep
+* Check out deep learning with cv2 or alternatives
+    * would be great if the old recognition algorithm can be used to train against existing movies
+    * different lighting conditions
+    * different balls
+    * start with simplest patterns only
+    * define tests how near different extraction parameters and/ or parameter changes are best 
+      to get good recognition
+* Could use 
 """
         
-threshold = 133
+threshold = 210
+minimum_area=75
+maximum_area=10000
+
 tracker = JugglingBallTracker()
 # for i in range(930): tracker.read_frame()
 while True:
@@ -109,14 +127,16 @@ while True:
     # tracker.crop_frame(0:480, 100:700)
     tracker.to_grey_scale()
     tracker.apply_threshold(threshold)
-    threshold %= 255
-    threshold += 1
-    balls = tracker.locate_balls(minimum_area=75, maximum_area=4000)
+    # threshold %= 255
+    # threshold += 1
+    # REFACT: locate should have access to some part of the history of located balls, 
+    # and use it to detect balls.
+    balls = tracker.locate_balls(minimum_area, maximum_area)
     tracker.highlight_contours(balls)
     tracker.highlight_balls(balls)
     tracker.annotate_balls(balls)
     
-    tracker.show_text("threshold %s" % threshold, (15, len(tracker.current_frame) - 20))
+    tracker.show_text("threshold %s, minimum_area %s, maximum_area %s" % (threshold, minimum_area, maximum_area), (15, len(tracker.current_frame) - 20))
     
 #     if len(locations) < len(track):
 #         print 'problem'
